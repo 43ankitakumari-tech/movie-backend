@@ -8,8 +8,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// আপনার MongoDB কানেকশন ইউআরআই
-const mongoURI = "mongodb+srv://43ankitakumari_db_user:91sVxPdPqcZyOBUN@cluster0.mlydnrm.mongodb.net/?retryWrites=true&w=majority";
+// MongoDB কানেকশন ইউআরআই
+const mongoURI = process.env.MONGO_URI || "mongodb+srv://43ankitakumari_db_user:91sVxPdPqcZyOBUN@cluster0.mlydnrm.mongodb.net/?retryWrites=true&w=majority";
 
 // ডাটাবেজ কানেক্ট করার কোড
 mongoose.connect(mongoURI, {
@@ -27,10 +27,10 @@ const movieSchema = new mongoose.Schema({
 });
 const Movie = mongoose.model('Movie', movieSchema);
 
-// ১. মুভি স্ক্র্যাপ করে ডাটাবেজে সেভ করার API
+// ১. hdtoday.tv থেকে মুভি স্ক্র্যাপ করে ডাটাবেজে সেভ করার API
 app.get('/api/scrape', async (req, res) => {
     try {
-        const response = await axios.get('https://moviestvhd.com/home/', {
+        const response = await axios.get('https://hdtoday.tv/home', {
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             }
@@ -38,13 +38,13 @@ app.get('/api/scrape', async (req, res) => {
         const $ = cheerio.load(response.data);
         let count = 0;
 
-        $('.film-detail').each(async (index, element) => {
-            const title = $(element).find('.film-name').text().trim();
+        // hdtoday.tv এর মুভি কার্প বা আইটেম সিলেক্টর
+        $('.flw-item').each(async (index, element) => {
+            const title = $(element).find('.film-name a').text().trim();
             const poster = $(element).find('img').attr('data-src') || $(element).find('img').attr('src');
-            const link = $(element).find('a').attr('href');
+            const link = 'https://hdtoday.tv' + $(element).find('.film-name a').attr('href');
 
             if (title) {
-                // ডাটাবেজে অলরেডি আছে কিনা চেক করে তারপর সেভ করা
                 const exists = await Movie.findOne({ title });
                 if (!exists) {
                     await Movie.create({ title, poster, link });
@@ -53,7 +53,7 @@ app.get('/api/scrape', async (req, res) => {
             }
         });
 
-        res.json({ success: true, message: `${count} new movies scraped and saved to MongoDB!` });
+        res.json({ success: true, message: `${count} new movies scraped from HDToday and saved to MongoDB!` });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
