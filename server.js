@@ -1,7 +1,6 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const axios = require('axios');
 
 const app = express();
 app.use(cors());
@@ -24,54 +23,42 @@ const movieSchema = new mongoose.Schema({
 });
 const Movie = mongoose.model('Movie', movieSchema);
 
-// ফ্রি API বা সার্চ সোর্স থেকে অটোমেটিক শত শত মুভি ডাটাবেজে সেভ করার রাউট
+// ডাটাবেজে বিশাল কালেকশন অটো-সিডিং রাউট
 app.get('/api/scrape', async (req, res) => {
     try {
-        let totalAdded = 0;
-        
-        // জনপ্রিয় মুভিগুলোর কিছু কিওয়ার্ড বা ক্যাটাগরি যা দিয়ে অটো সার্চ করা হবে
-        const searchQueries = [
-            "Action", "Marvel", "Avengers", "Batman", "Spider", "Fast", 
-            "Avatar", "John Wick", "Matrix", "Transformer", "Star", 
-            "Jurassic", "Mission", "Hobbit", "Lord", "Panda", "Frozen",
-            "Doctor", "Thor", "Superman", "Flash", "Venom", "Deadpool"
+        const moviesList = [
+            { title: "Deadpool & Wolverine (2024)", poster: "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=500&q=80", link: "https://www.youtube.com/embed/73_1biulkfk" },
+            { title: "Inside Out 2", poster: "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=500&q=80", link: "https://www.youtube.com/embed/LEjhY15eCx0" },
+            { title: "Dune: Part Two", poster: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=500&q=80", link: "https://www.youtube.com/embed/Way9Dexny3w" },
+            { title: "Avatar: The Way of Water", poster: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=500&q=80", link: "https://www.youtube.com/embed/d9MyW72ELq0" },
+            { title: "Spider-Man: Across the Spider-Verse", poster: "https://images.unsplash.com/photo-1635805737707-575885ab0820?auto=format&fit=crop&w=500&q=80", link: "https://www.youtube.com/embed/cqGjhVJWtEg" },
+            { title: "Oppenheimer", poster: "https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=500&q=80", link: "https://www.youtube.com/embed/uYPbbksJxIg" },
+            { title: "Barbie", poster: "https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=500&q=80", link: "https://www.youtube.com/embed/pBk4NYhWNMM" },
+            { title: "Interstellar", poster: "https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?auto=format&fit=crop&w=500&q=80", link: "https://www.youtube.com/embed/zSWdZVtXT7E" },
+            { title: "The Dark Knight", poster: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=500&q=80", link: "https://www.youtube.com/embed/EXeTwQWrcwY" },
+            { title: "Inception", poster: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=500&q=80", link: "https://www.youtube.com/embed/YoHD9XEInc0" },
+            { title: "Avengers: Endgame", poster: "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=500&q=80", link: "https://www.youtube.com/embed/TcMBFSGVi1c" },
+            { title: "John Wick: Chapter 4", poster: "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=500&q=80", link: "https://www.youtube.com/embed/qEVUtrk8_B4" },
+            { title: "Furiosa: A Mad Max Saga", poster: "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=500&q=80", link: "https://www.youtube.com/embed/XJMuhwVlca4" },
+            { title: "The Batman Part II", poster: "https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=500&q=80", link: "https://www.youtube.com/embed/mqqft2x_Ks4" },
+            { title: "Stranger Things - Season 5", poster: "https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=500&q=80", link: "https://www.youtube.com/embed/b9EkMc79ZSU" },
+            { title: "The Matrix Resurrections", poster: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=500&q=80", link: "https://www.youtube.com/embed/9ix7TUGVYIo" },
+            { title: "Gladiator II", poster: "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=500&q=80", link: "https://www.youtube.com/embed/4rgYUipGJNo" },
+            { title: "Joker: Folie à Deux", poster: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=500&q=80", link: "https://www.youtube.com/embed/xy8aJw1vYHo" },
+            { title: "Venom: The Last Dance", poster: "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=500&q=80", link: "https://www.youtube.com/embed/__2bjWbetsA" },
+            { title: "Mission: Impossible - Dead Reckoning", poster: "https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=500&q=80", link: "https://www.youtube.com/embed/NOhDysZOmoo" }
         ];
 
-        for (let query of searchQueries) {
-            try {
-                // Free IMDb/Movie Database API ব্যবহার করে ডেটা আনা (কোনো API Key ছাড়াই)
-                const apiUrl = `https://imdb.iamidiotareyoutoo.com/search?q=${encodeURIComponent(query)}`;
-                const response = await axios.get(apiUrl);
-                
-                if (response.data && response.data.description) {
-                    const items = response.data.description;
-
-                    for (let item of items) {
-                        const title = item['#TITLE'];
-                        const poster = item['#IMG_POSTER'] || "https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=500&q=80";
-                        const imdbId = item['#IMDB_ID'];
-                        
-                        // ইউটিউব বা স্ট্রিম করার ডাইরেক্ট লিংক তৈরি
-                        const link = `https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(title + " official trailer full movie")}`;
-
-                        if (title) {
-                            const exists = await Movie.findOne({ title });
-                            if (!exists) {
-                                await Movie.create({ title, poster, link });
-                                totalAdded++;
-                            }
-                        }
-                    }
-                }
-            } catch (err) {
-                console.log(`Skipped query ${query}:`, err.message);
+        let count = 0;
+        for (let movie of moviesList) {
+            const exists = await Movie.findOne({ title: movie.title });
+            if (!exists) {
+                await Movie.create(movie);
+                count++;
             }
         }
 
-        res.json({ 
-            success: true, 
-            message: `Auto-Sync Successful! Added ${totalAdded} new movies into MongoDB from Free Movie Database.` 
-        });
+        res.json({ success: true, message: `${count} movies successfully loaded into MongoDB database!` });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
@@ -80,7 +67,7 @@ app.get('/api/scrape', async (req, res) => {
 // সমস্ত মুভি ফ্রন্টএন্ডে পাঠানোর API
 app.get('/api/movies', async (req, res) => {
     try {
-        const movies = await Movie.find().sort({ _id: -1 }); // নতুন মুভিগুলো সবার আগে দেখাবে
+        const movies = await Movie.find().sort({ _id: -1 });
         res.json({ success: true, count: movies.length, data: movies });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
