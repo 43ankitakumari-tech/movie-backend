@@ -1,8 +1,6 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const axios = require('axios');
-const cheerio = require('cheerio');
 
 const app = express();
 app.use(cors());
@@ -25,46 +23,54 @@ const movieSchema = new mongoose.Schema({
 });
 const Movie = mongoose.model('Movie', movieSchema);
 
-// hdtoday.tv থেকে রিয়েল মুভি স্ক্র্যাপ করার API
+// প্রি-বিল্ড পপুলার মুভি ডেটা স্বয়ংক্রিয়ভাবে ডাটাবেজে যুক্ত করার রাউট
 app.get('/api/scrape', async (req, res) => {
     try {
-        // হেডার যুক্ত করে রিকোয়েস্ট পাঠানো যাতে ব্রাউজারের মতো আচরণ করে
-        const response = await axios.get('https://hdtoday.tv/home', {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept-Language': 'en-US,en;q=0.9',
-                'Referer': 'https://hdtoday.tv/'
+        const sampleMovies = [
+            {
+                title: "Hope (2026)",
+                poster: "https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=500&q=80",
+                link: "https://www.youtube.com/embed/dQw4w9WgXcQ"
+            },
+            {
+                title: "Fall 2: Deadpoint",
+                poster: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=500&q=80",
+                link: "https://www.youtube.com/embed/dQw4w9WgXcQ"
+            },
+            {
+                title: "Clayface",
+                poster: "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=500&q=80",
+                link: "https://www.youtube.com/embed/dQw4w9WgXcQ"
+            },
+            {
+                title: "Street Fighter",
+                poster: "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=500&q=80",
+                link: "https://www.youtube.com/embed/dQw4w9WgXcQ"
+            },
+            {
+                title: "Grey's Anatomy Series",
+                poster: "https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=500&q=80",
+                link: "https://www.youtube.com/embed/dQw4w9WgXcQ"
+            },
+            {
+                title: "Animation World",
+                poster: "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=500&q=80",
+                link: "https://www.youtube.com/embed/dQw4w9WgXcQ"
             }
-        });
+        ];
 
-        const $ = cheerio.load(response.data);
         let count = 0;
-
-        // hdtoday.tv এর মুভি আইটেম সিলেক্টর
-        $('.flw-item').each(async (index, element) => {
-            const title = $(element).find('.film-name a').text().trim();
-            const poster = $(element).find('img').attr('data-src') || $(element).find('img').attr('src');
-            const link = $(element).find('.film-name a').attr('href');
-            
-            const fullLink = link ? (link.startsWith('http') ? link : 'https://hdtoday.tv' + link) : 'https://hdtoday.tv';
-
-            if (title) {
-                const exists = await Movie.findOne({ title });
-                if (!exists) {
-                    await Movie.create({ 
-                        title, 
-                        poster: poster || "https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=500&q=80", 
-                        link: fullLink 
-                    });
-                    count++;
-                }
+        for (let movie of sampleMovies) {
+            const exists = await Movie.findOne({ title: movie.title });
+            if (!exists) {
+                await Movie.create(movie);
+                count++;
             }
-        });
+        }
 
-        res.json({ success: true, message: `${count} new movies successfully scraped from hdtoday.tv and saved to MongoDB!` });
+        res.json({ success: true, message: `${count} movies successfully loaded into MongoDB!` });
     } catch (error) {
-        // কোনো কারণে স্ক্র্যাপিং ব্লক হলে ফলব্যাক হিসেবে যেন কিছু মুভি সেভ হয়ে যায়
-        res.status(500).json({ success: false, error: "Scraping blocked by target site protection. Please try again or use direct API.", details: error.message });
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
