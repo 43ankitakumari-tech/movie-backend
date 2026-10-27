@@ -1,7 +1,6 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const axios = require('axios');
 
 const app = express();
 app.use(cors());
@@ -24,33 +23,62 @@ const movieSchema = new mongoose.Schema({
 });
 const Movie = mongoose.model('Movie', movieSchema);
 
-// TMDB API থেকে হাজার হাজার রিয়েল মুভি ডাটাবেজে ফেচ করে সেভ করার রাউট
+// রিয়েল মুভি ও সিরিজ ডাটাবেজে যুক্ত করার রাউট
 app.get('/api/scrape', async (req, res) => {
     try {
-        let totalAdded = 0;
-        // TMDB-এর ফ্রি পাবলিক পেজগুলো থেকে ট্রেন্ডিং মুভি ফেচ করা (একাধিক পেজ থেকে মুভি আনা যায়)
-        for (let page = 1; page <= 5; page++) {
-            const tmdbUrl = `https://api.themoviedb.org/3/trending/movie/day?api_key=c57701a2f64a2f8b50669255018610be&page=${page}`;
-            const response = await axios.get(tmdbUrl);
-            const results = response.data.results;
+        const moviesList = [
+            {
+                title: "Deadpool & Wolverine (2024)",
+                poster: "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=500&q=80",
+                link: "https://www.youtube.com/embed/73_1biulkfk"
+            },
+            {
+                title: "Inside Out 2",
+                poster: "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=500&q=80",
+                link: "https://www.youtube.com/embed/LEjhY15eCx0"
+            },
+            {
+                title: "Dune: Part Two",
+                poster: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=500&q=80",
+                link: "https://www.youtube.com/embed/Way9Dexny3w"
+            },
+            {
+                title: "Furiosa: A Mad Max Saga",
+                poster: "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=500&q=80",
+                link: "https://www.youtube.com/embed/XJMuhwVlca4"
+            },
+            {
+                title: "The Batman Part II",
+                poster: "https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=500&q=80",
+                link: "https://www.youtube.com/embed/mqqft2x_Ks4"
+            },
+            {
+                title: "Stranger Things - Season 5",
+                poster: "https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=500&q=80",
+                link: "https://www.youtube.com/embed/b9EkMc79ZSU"
+            },
+            {
+                title: "Spider-Man: Across the Spider-Verse",
+                poster: "https://images.unsplash.com/photo-1635805737707-575885ab0820?auto=format&fit=crop&w=500&q=80",
+                link: "https://www.youtube.com/embed/cqGjhVJWtEg"
+            },
+            {
+                title: "Avatar: The Way of Water",
+                poster: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=500&q=80",
+                link: "https://www.youtube.com/embed/d9MyW72ELq0"
+            }
+        ];
 
-            for (let item of results) {
-                const title = item.title || item.name;
-                const poster = item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : "https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=500&q=80";
-                // ডিফল্টভাবে ইউটিউব ট্রেলার বা সার্চ লিংক সেট করা
-                const link = `https://www.youtube.com/results?search_query=${encodeURIComponent(title + " full movie")}`;
-
-                if (title) {
-                    const exists = await Movie.findOne({ title });
-                    if (!exists) {
-                        await Movie.create({ title, poster, link });
-                        totalAdded++;
-                    }
-                }
+        let count = 0;
+        for (let movie of moviesList) {
+            const exists = await Movie.findOne({ title: movie.title });
+            if (!exists) {
+                await Movie.create(movie);
+                count++;
             }
         }
 
-        res.json({ success: true, message: `${totalAdded} new movies successfully loaded from TMDB into MongoDB!` });
+        res.json({ success: true, message: `${count} movies successfully loaded into MongoDB!` });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
