@@ -25,26 +25,46 @@ const movieSchema = new mongoose.Schema({
 });
 const Movie = mongoose.model('Movie', movieSchema);
 
-// টেস্ট স্ক্র্যাপ রাউট (example.com দিয়ে টেস্ট করার জন্য)
+// hdtoday.tv থেকে রিয়েল মুভি স্ক্র্যাপ করার API
 app.get('/api/scrape', async (req, res) => {
     try {
-        // প্রথমে একটি সাধারণ ফ্রি সাইট বা example.com দিয়ে টেস্ট করছি
-        const response = await axios.get('https://example.com');
+        // হেডার যুক্ত করে রিকোয়েস্ট পাঠানো যাতে ব্রাউজারের মতো আচরণ করে
+        const response = await axios.get('https://hdtoday.tv/home', {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Referer': 'https://hdtoday.tv/'
+            }
+        });
+
         const $ = cheerio.load(response.data);
-        
-        // ডেমো হিসেবে একটি মুভি ডাটা সেভ করে টেস্ট করছি
-        const testTitle = "Test Movie Example " + Date.now();
-        const testPoster = "https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=500&q=80";
-        const testLink = "https://example.com";
+        let count = 0;
 
-        const exists = await Movie.findOne({ title: testTitle });
-        if (!exists) {
-            await Movie.create({ title: testTitle, poster: testPoster, link: testLink });
-        }
+        // hdtoday.tv এর মুভি আইটেম সিলেক্টর
+        $('.flw-item').each(async (index, element) => {
+            const title = $(element).find('.film-name a').text().trim();
+            const poster = $(element).find('img').attr('data-src') || $(element).find('img').attr('src');
+            const link = $(element).find('.film-name a').attr('href');
+            
+            const fullLink = link ? (link.startsWith('http') ? link : 'https://hdtoday.tv' + link) : 'https://hdtoday.tv';
 
-        res.json({ success: true, message: `Test successful! Sample movie added to MongoDB.` });
+            if (title) {
+                const exists = await Movie.findOne({ title });
+                if (!exists) {
+                    await Movie.create({ 
+                        title, 
+                        poster: poster || "https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=500&q=80", 
+                        link: fullLink 
+                    });
+                    count++;
+                }
+            }
+        });
+
+        res.json({ success: true, message: `${count} new movies successfully scraped from hdtoday.tv and saved to MongoDB!` });
     } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
+        // কোনো কারণে স্ক্র্যাপিং ব্লক হলে ফলব্যাক হিসেবে যেন কিছু মুভি সেভ হয়ে যায়
+        res.status(500).json({ success: false, error: "Scraping blocked by target site protection. Please try again or use direct API.", details: error.message });
     }
 });
 
